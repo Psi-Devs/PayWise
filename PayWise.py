@@ -21,43 +21,47 @@ st.set_page_config(
     page_title="PayWise – Smart EMI Comparison",
     layout="wide"
 )
+
 GST = 0.18
 
 
 # =====================================================
-# EMI LOGIC
+# EMI CORE LOGIC
 # =====================================================
-def calculate_emi(p, r, n):
-    r = r / 12 / 100
+def calculate_emi(principal, annual_rate, months):
+    r = annual_rate / 12 / 100
     if r == 0:
-        return p / n
-    return p * r * (1 + r)**n / ((1 + r)**n - 1)
+        return principal / months
+    return principal * r * (1 + r) ** months / ((1 + r) ** months - 1)
 
 
-def emi_schedule(p, r, n, fee):
-    emi = calculate_emi(p, r, n)
-    bal = p
+def generate_emi_schedule(
+    principal,
+    annual_rate,
+    months,
+    processing_fee
+):
+    emi = calculate_emi(principal, annual_rate, months)
+    balance = principal
     rows = []
 
-    for i in range(1, n + 1):
-        interest = bal * (r / 12 / 100)
+    for m in range(1, months + 1):
+        interest = balance * (annual_rate / 12 / 100)
         gst = interest * GST
-        principal = emi - interest
-        bal -= principal
+        principal_paid = emi - interest
+        balance -= principal_paid
 
         rows.append({
-            "Month": i,
-            "Principal Paid": principal,
+            "Month": m,
+            "Principal Paid": principal_paid,
             "Interest": interest,
-            "GST on Interest": gst,
-            "Total Payment": emi + gst,
-            "Principal Remaining": max(bal, 0),
-            "Remarks": "Processing Fee" if i == 1 and fee > 0 else ""
+            "GST on Interest (@18%)": gst,
+            "Processing Fee": processing_fee if m == 1 else 0,
+            "Total Payment": emi + gst + (processing_fee if m == 1 else 0),
+            "Principal Remaining": max(balance, 0),
         })
 
-    df = pd.DataFrame(rows)
-    df.loc[0, "Total Payment"] += fee
-    return df, emi
+    return pd.DataFrame(rows), emi
 
 
 def yearly_view(df):
@@ -69,53 +73,31 @@ def yearly_view(df):
 
 
 # =====================================================
-# PDF EXPORT
+# DONUT CHART
 # =====================================================
-def export_pdf(name, summary, schedule):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, margin=36)
-    styles = getSampleStyleSheet()
-    elements = []
+def render_donut(principal, interest, tax, fee, title):
+    fig, ax = plt.subplots(figsize=(4, 4))
+    values = [principal, interest, tax, fee]
+    labels = ["Principal", "Interest", "Tax", "Fees"]
 
-    elements.append(
-        Paragraph(f"<b>PayWise – EMI Scenario: {name}</b>", styles["Title"])
+    ax.pie(
+        values,
+        labels=labels,
+        startangle=90,
+        colors=["#4c72b0", "#dd8452", "#c44e52", "#8172b2"]
     )
-    elements.append(
-        Paragraph("Make smarter payment decisions", styles["Italic"])
+    centre = plt.Circle((0, 0), 0.65, fc="white")
+    ax.add_artist(centre)
+    ax.text(
+        0, 0,
+        f"{sum(values):,.0f}",
+        ha="center",
+        va="center",
+        fontsize=11,
+        weight="bold"
     )
-    elements.append(Spacer(1, 12))
-
-    table = Table([["Metric", "Value"]] + summary)
-    table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
-    ]))
-    elements.append(table)
-    elements.append(Spacer(1, 16))
-
-    elements.append(Paragraph("<b>Payment Schedule</b>", styles["Heading2"]))
-    table = Table(
-        [schedule.columns.tolist()] + schedule.round(2).values.tolist(),
-        repeatRows=1
-    )
-    table.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-    ]))
-    elements.append(table)
-
-    elements.append(Spacer(1, 20))
-    elements.append(
-        Paragraph(
-            "<i>This report is for educational purposes only.</i>",
-            styles["Italic"]
-        )
-    )
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    ax.set_title(title)
+    st.pyplot(fig)
 
 
 # =====================================================
@@ -126,47 +108,71 @@ if "scenarios" not in st.session_state:
 
 
 # =====================================================
-# TOP INTRO (PAYWISE)
+# TOP INTRO
 # =====================================================
 st.markdown("""
 ## 💳 PayWise  
 ### *Make smarter payment decisions.*
 
 Compare **Full Payment**, **Normal EMI**, and **No-Cost EMI**  
-with **GST, processing fees, cashback, and full transparency**.
+with **GST, fees, cashback, and clear breakdowns**.
 """)
 
 
 # =====================================================
-# INPUTS
+# SIDEBAR — VIEW MODE
 # =====================================================
 with st.sidebar:
-    st.header("Purchase Details")
+    st.markdown("### View Mode")
+    view_mode = st.radio(
+        "Experience",
+        ["Simple (Recommended)", "Detailed Breakdown"]
+    )
 
-    amount = st.number_input(
+    st.markdown("### Purchase Details")
+
+    purchase_amount = st.number_input(
         "Purchase Amount (₹)",
         1_000, 50_00_000, 50_000, step=1_000
     )
-    rate = st.number_input(
+
+    interest_rate = st.number_input(
         "Interest Rate (% p.a.)",
         0.0, 40.0, 15.0, step=0.25
     )
+
     tenure = st.selectbox(
         "Tenure (months)",
         [3, 6, 9, 12, 18, 24, 36]
     )
 
-    fee = st.number_input(
-        "Processing Fee (₹)",
-        0, 5000, 199
-    ) * (1 + GST)
+    # Processing Fee
+    st.markdown("### Processing Fee")
 
-    cashback = st.number_input(
-        "Cashback (Full Payment)",
-        0, 50000, 0
-    )
+    if view_mode == "Detailed Breakdown":
+        fee_type = st.radio("Fee Type", ["Fixed", "Percentage"])
+        if fee_type == "Fixed":
+            fee_base = st.number_input("Fee Amount (₹)", 0, 5000, 199)
+        else:
+            fee_base = purchase_amount * st.number_input(
+                "Fee (%)", 0.0, 5.0, 1.0, step=0.1
+            ) / 100
+    else:
+        fee_base = st.number_input("Fee Amount (₹)", 0, 5000, 199)
 
-    view = st.radio(
+    processing_fee = fee_base * (1 + GST)
+
+    # Cashback
+    st.markdown("### Cashback (Optional)")
+
+    if view_mode == "Detailed Breakdown":
+        cashback_full = st.number_input("Full Payment Cashback", 0, 50000, 0)
+        cashback_emi = st.number_input("Normal EMI Cashback", 0, 50000, 0)
+        cashback_nocost = st.number_input("No-Cost EMI Cashback", 0, 50000, 0)
+    else:
+        cashback_full = cashback_emi = cashback_nocost = 0
+
+    schedule_view = st.radio(
         "Schedule View",
         ["Monthly", "Yearly"]
     )
@@ -175,26 +181,48 @@ with st.sidebar:
 # =====================================================
 # CALCULATIONS
 # =====================================================
-emi_df, emi = emi_schedule(amount, rate, tenure, fee)
+emi_df, emi_value = generate_emi_schedule(
+    purchase_amount,
+    interest_rate,
+    tenure,
+    processing_fee
+)
 
-interest = emi_df["Interest"].sum()
-gst = emi_df["GST on Interest"].sum()
+total_interest = emi_df["Interest"].sum()
+total_tax = emi_df["GST on Interest (@18%)"].sum()
 
-normal_total = emi_df["Total Payment"].sum()
-no_cost_total = amount + gst + fee
-full_total = amount + fee - cashback
+normal_total = emi_df["Total Payment"].sum() - cashback_emi
+no_cost_total = purchase_amount + total_tax + processing_fee - cashback_nocost
+full_total = purchase_amount + processing_fee - cashback_full
+
+avg_monthly = normal_total / tenure
+avg_principal = purchase_amount / tenure
+avg_interest = total_interest / tenure
+avg_tax = total_tax / tenure
 
 
 # =====================================================
-# SUMMARY
+# COST SUMMARY
 # =====================================================
 st.markdown("### 📌 Cost Summary")
 
 c1, c2, c3 = st.columns(3)
 
-c1.metric("Full Payment", f"{full_total:,.0f}")
-c2.metric("Normal EMI", f"{normal_total:,.0f}")
-c3.metric("No-Cost EMI", f"{no_cost_total:,.0f}")
+with c1:
+    st.metric("Full Payment", f"{full_total:,.0f}")
+    st.caption("One-time payment")
+
+with c2:
+    st.metric("Normal EMI", f"{normal_total:,.0f}")
+    st.caption(
+        f"~₹{avg_monthly:,.0f}/month  "
+        f"(₹{avg_principal:,.0f} + ₹{avg_interest:,.0f} + "
+        f"₹{avg_tax:,.0f} tax)"
+    )
+
+with c3:
+    st.metric("No-Cost EMI", f"{no_cost_total:,.0f}")
+    st.caption("Interest discounted, taxes & fees apply")
 
 st.caption(
     "ℹ️ No-Cost EMI assumes interest is discounted by the merchant. "
@@ -203,20 +231,60 @@ st.caption(
 
 
 # =====================================================
-# SCHEDULE
+# DONUT (STAGED)
+# =====================================================
+st.markdown("### 📊 Cost Breakdown")
+
+selected_method = st.radio(
+    "View breakdown for",
+    ["Normal EMI", "No-Cost EMI", "Full Payment"],
+    horizontal=True
+)
+
+if selected_method == "Normal EMI":
+    render_donut(
+        purchase_amount,
+        total_interest,
+        total_tax,
+        processing_fee,
+        "Normal EMI Breakdown"
+    )
+
+elif selected_method == "No-Cost EMI":
+    render_donut(
+        purchase_amount,
+        0,
+        total_tax,
+        processing_fee,
+        "No-Cost EMI Breakdown"
+    )
+
+else:
+    render_donut(
+        purchase_amount,
+        0,
+        0,
+        processing_fee,
+        "Full Payment Breakdown"
+    )
+
+
+# =====================================================
+# PAYMENT SCHEDULE
 # =====================================================
 st.markdown("### 📅 Payment Schedule")
 
-display_df = emi_df if view == "Monthly" else yearly_view(emi_df)
+display_df = emi_df if schedule_view == "Monthly" else yearly_view(emi_df)
+
+if view_mode == "Simple (Recommended)":
+    display_df = display_df[[
+        "Month" if "Month" in display_df.columns else display_df.columns[0],
+        "Total Payment",
+        "Principal Remaining"
+    ]]
 
 st.dataframe(
-    display_df.style.format({
-        "Principal Paid": "{:,.0f}",
-        "Interest": "{:,.0f}",
-        "GST on Interest": "{:,.0f}",
-        "Total Payment": "{:,.0f}",
-        "Principal Remaining": "{:,.0f}",
-    })
+    display_df.style.format("{:,.0f}")
 )
 
 
@@ -225,77 +293,17 @@ st.dataframe(
 # =====================================================
 st.markdown("### 💾 Save Scenario")
 
-name = st.text_input("Scenario Name")
+scenario_name = st.text_input("Scenario Name")
 
-if st.button("Save Scenario") and name:
-    st.session_state.scenarios[name] = {
-        "amount": amount,
-        "rate": rate,
-        "tenure": tenure,
-        "fee": fee,
-        "cashback": cashback,
-        "summary": [
-            ["Full Payment", f"{full_total:,.0f}"],
-            ["Normal EMI", f"{normal_total:,.0f}"],
-            ["No-Cost EMI", f"{no_cost_total:,.0f}"],
-        ],
-        "schedule": display_df,
+if st.button("Save Scenario") and scenario_name:
+    st.session_state.scenarios[scenario_name] = {
+        "summary": {
+            "Full Payment": full_total,
+            "Normal EMI": normal_total,
+            "No-Cost EMI": no_cost_total
+        }
     }
-    st.success("Scenario saved successfully")
-
-
-# =====================================================
-# EXPORT SAVED SCENARIO
-# =====================================================
-if st.session_state.scenarios:
-    st.markdown("### 📄 Export Scenario to PDF")
-
-    sel = st.selectbox(
-        "Select Scenario",
-        list(st.session_state.scenarios.keys())
-    )
-
-    scenario = st.session_state.scenarios[sel]
-
-    pdf = export_pdf(
-        sel,
-        scenario["summary"],
-        scenario["schedule"]
-    )
-
-    st.download_button(
-        "Download PDF",
-        pdf,
-        f"{sel}.pdf",
-        "application/pdf"
-    )
-
-
-# =====================================================
-# COMPARE TWO SCENARIOS
-# =====================================================
-if len(st.session_state.scenarios) >= 2:
-    st.markdown("### 🔍 Compare Two Scenarios")
-
-    selected = st.multiselect(
-        "Select two scenarios",
-        list(st.session_state.scenarios.keys()),
-        max_selections=2
-    )
-
-    if len(selected) == 2:
-        a = st.session_state.scenarios[selected[0]]
-        b = st.session_state.scenarios[selected[1]]
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader(selected[0])
-            st.table(a["summary"])
-
-        with col2:
-            st.subheader(selected[1])
-            st.table(b["summary"])
+    st.success("Scenario saved")
 
 
 # =====================================================
