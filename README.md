@@ -1,15 +1,13 @@
-# PayWise
-A not just simple emi comparison app 
-
 # 💳 PayWise
 
-**EMI Truth** is a simple, transparent tool to compare the *real cost* of:
+**PayWise** is a simple, transparent tool to help you make **smarter payment decisions**.
 
+It compares the *real cost* of:
 - Full payment
 - Normal EMI
 - No-Cost EMI
 
-It includes **GST, processing fees, cashback, and schedules** so you can make informed decisions — without marketing tricks.
+All calculations include **GST, processing fees, cashback, and hidden costs** — so you see the truth, not marketing numbers.
 
 ---
 
@@ -18,40 +16,48 @@ It includes **GST, processing fees, cashback, and schedules** so you can make in
 - Honest No-Cost EMI calculation
 - Full payment vs EMI comparison
 - GST & processing fee included
-- Monthly & yearly schedules
+- Cashback support
+- Monthly & yearly payment schedules
 - Scenario saving
 - Side-by-side scenario comparison
 - PDF export
-- Clean, calm UI (light & dark mode)
+- Light & dark mode
+- Clean, calm, decision-focused UI
 
 ---
 
-## 🧠 Why EMI Truth?
+## 🧠 Why PayWise?
 
-Many calculators hide fees or oversimplify No-Cost EMI.
+Most EMI calculators:
+- Hide fees
+- Oversimplify No-Cost EMI
+- Don’t show total cost clearly
 
-**EMI Truth shows the real numbers.**
+**PayWise focuses on transparency and clarity**, helping you choose what actually costs less.
 
 ---
 
 ## 🧮 How to Use
 
-1. Enter purchase amount and interest rate
-2. Choose tenure and fees
-3. Add cashback (if any)
-4. Compare payment options
-5. Save scenarios or export PDF
+1. Enter purchase amount and interest rate  
+2. Choose tenure and processing fee  
+3. Add cashback if applicable  
+4. Compare Full Payment, EMI, and No-Cost EMI  
+5. Save scenarios or export a PDF  
 
 ---
 
 ## ⚠️ Disclaimer
 
-This tool is for **educational purposes only**.  
+PayWise is for **educational purposes only**.  
 Actual EMI terms depend on banks, card issuers, and merchant offers.
+
+This tool does **not** provide financial advice.
 
 ---
 
-## 🌐 Deployment
+## 🌐 Run Locally
 
-You can deploy this app for free using **Streamlit Community Cloud**.
-
+```bash
+pip install -r requirements.txt
+streamlit run app.py
