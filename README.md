@@ -1,7 +1,7 @@
 # PayWise
 A not just simple emi comparison app 
 
-# 💳 EMI Truth
+# 💳 PayWise
 
 **EMI Truth** is a simple, transparent tool to compare the *real cost* of:
 
