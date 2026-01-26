@@ -91,6 +91,7 @@ full_total = purchase_amount - cashback_full
 avg_monthly = normal_total / tenure
 avg_principal = purchase_amount / tenure
 avg_interest = total_interest / tenure
+
 avg_tax = total_gst_interest / tenure   # ✅ FIXED
 
 # ---------------- RENDER ----------------
@@ -158,4 +159,5 @@ st.markdown(
     "</small>",
     unsafe_allow_html=True,
 )
+
 
