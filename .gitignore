@@ -1,0 +1,10 @@
+# Virtual environment
+web-venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS / editor noise
+.env
+.vscode/
