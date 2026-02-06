@@ -1,63 +1,60 @@
-# 💳 PayWise
+# 💳 PayWise v2
 
-**PayWise** is a simple, transparent tool to help you make **smarter payment decisions**.
+**PayWise** is a Streamlit app for transparent **EMI comparison** and a **Step-Up SIP investment** view.
 
-It compares the *real cost* of:
-- Full payment
-- Normal EMI
-- No-Cost EMI
+## Modes
+- **PayWise**: Compare Full Payment, Regular EMI, and No-Cost EMI with GST, fees, and cashback.
+- **Invest**: Step-Up SIP growth with inflation-adjusted views and a PDF report.
 
-All calculations include **GST, processing fees, cashback, and hidden costs** — so you see the truth, not marketing numbers.
-
----
-
-## 🚀 Features
-
+## PayWise Features
 - Honest No-Cost EMI calculation
 - Full payment vs EMI comparison
-- GST & processing fee included
+- GST and processing fee included
 - Cashback support
-- Monthly & yearly payment schedules
-- Scenario saving
-- Side-by-side scenario comparison
-- PDF export
-- Light & dark mode
-- Clean, calm, decision-focused UI
+- Monthly and yearly schedules
+- Simple, Detailed, and Mechanism views
+- PDF export with breakdowns
 
----
+## Invest Features
+- Step-Up SIP projection with expected returns
+- Inflation-adjusted (real) value tracking
+- Growth chart and donut summary
+- 5-year milestones table
+- Monthly or yearly report view
+- PDF export with glossary
 
-## 🧠 Why PayWise?
+## Project Structure
+- `PayWise.py` main Streamlit app and mode toggle
+- `modules/` UI views and Invest sections
+- `utils/calculations.py` EMI calculation engine
+- `utils/paywise_summary.py` PayWise summary builder for UI views
+- `utils/investment.py` SIP calculations
+- `utils/pdf_export.py` PayWise PDF report
+- `utils/invest_pdf.py` Invest PDF report
+- `tests/` unit tests for PayWise and Invest calculations/PDFs
+- `prototypes/PayWiseV2.py` legacy prototype snapshot
 
-Most EMI calculators:
-- Hide fees
-- Oversimplify No-Cost EMI
-- Don’t show total cost clearly
-
-**PayWise focuses on transparency and clarity**, helping you choose what actually costs less.
-
----
-
-## 🧮 How to Use
-
-1. Enter purchase amount and interest rate  
-2. Choose tenure and processing fee  
-3. Add cashback if applicable  
-4. Compare Full Payment, EMI, and No-Cost EMI  
-5. Save scenarios or export a PDF  
-
----
-
-## ⚠️ Disclaimer
-
-PayWise is for **educational purposes only**.  
-Actual EMI terms depend on banks, card issuers, and merchant offers.
-
-This tool does **not** provide financial advice.
-
----
+## Notes
+- Scenario saving/history is intentionally removed in this version.
+- Percentage-based processing fees are financed into the EMI principal.
+- Fixed processing fees are charged upfront in month 1.
+- This tool is for educational purposes only. Not financial advice.
 
 ## 🌐 Run Locally
-
 ```bash
 pip install -r requirements.txt
-streamlit run app.py
+python -m streamlit run PayWise.py
+```
+
+## 🧪 Tests
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest
+```
+
+## 🧹 Lint / Format
+```bash
+pip install -r requirements-dev.txt
+python -m ruff check .
+python -m ruff format .
+```
