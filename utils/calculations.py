@@ -73,9 +73,6 @@ def compute_paywise(
         upfront_processing_fee = processing_fee_base
         upfront_processing_gst = processing_fee_gst
 
-    if fee_mode is None:
-    fee_mode = "Fixed"
-
     emi = calculate_emi(principal_for_emi, interest_rate, tenure)
     monthly_rate = interest_rate / 12 / 100
 
