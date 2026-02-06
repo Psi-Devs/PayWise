@@ -11,12 +11,11 @@ def render_simple_view(
     avg_principal,
     avg_interest,
     avg_tax,
-    total_interest,
-    total_gst_interest,
-    total_fee_with_gst,
+    avg_fee,
     emi_df,
     schedule_view,
     yearly_view,
+    breakdowns,
 ):
 
     st.markdown("### 📌 Cost Summary")
@@ -31,7 +30,8 @@ def render_simple_view(
         st.metric("Normal EMI", f"{normal_total:,.0f}")
         st.caption(
             f"~₹{avg_monthly:,.0f}/month "
-            f"(₹{avg_principal:,.0f} + ₹{avg_interest:,.0f} + ₹{avg_tax:,.0f} tax)"
+            f"(₹{avg_principal:,.0f} + ₹{avg_interest:,.0f} + "
+            f"₹{avg_tax:,.0f} tax + ₹{avg_fee:,.0f} fees)"
         )
 
     with c3:
@@ -46,22 +46,30 @@ def render_simple_view(
     c1, _, c2, _, c3 = st.columns([1, 0.4, 1, 0.4, 1])
 
     with c1:
-        render_donut(purchase_amount, 0, 0, 0)
+        full_net = breakdowns["full"]["net"]
+        render_donut(
+            full_net["principal"],
+            full_net["interest"],
+            full_net["tax"],
+            full_net["fee"],
+        )
 
     with c2:
+        emi_net = breakdowns["emi"]["net"]
         render_donut(
-            purchase_amount,
-            total_interest,
-            total_gst_interest,
-            total_fee_with_gst,
+            emi_net["principal"],
+            emi_net["interest"],
+            emi_net["tax"],
+            emi_net["fee"],
         )
 
     with c3:
+        nocost_net = breakdowns["nocost"]["net"]
         render_donut(
-            purchase_amount,
-            0,
-            total_gst_interest,
-            total_fee_with_gst,
+            nocost_net["principal"],
+            nocost_net["interest"],
+            nocost_net["tax"],
+            nocost_net["fee"],
         )
 
     st.markdown("### 📅 Payment Schedule")
@@ -72,4 +80,4 @@ def render_simple_view(
         ["Month", "Total Payment", "Principal Remaining"]
     ]
 
-    st.dataframe(display_df.style.format("{:,.0f}"), use_container_width=True)
+    st.dataframe(display_df.style.format("{:,.0f}"), width="stretch")

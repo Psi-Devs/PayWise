@@ -69,6 +69,8 @@ def generate_pdf_report(
     total_gst_interest,
     total_fee_with_gst,
     emi_df,
+    breakdowns,
+    fee_mode,
 ):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -105,15 +107,26 @@ def generate_pdf_report(
     elements.append(Spacer(1, 18))
 
     # ---------------- Total Payout Breakdown ----------------
+    cashback_emi = breakdowns["emi"]["cashback"]
+    fee_mode_normalized = (
+        "Percentage" if str(fee_mode).lower().startswith("p") else "Fixed"
+    )
+
+    totals_rows = [
+        ["Component", "Amount (₹)"],
+        ["Principal", f"{purchase_amount:,.0f}"],
+        ["Interest", f"{total_interest:,.0f}"],
+        ["GST", f"{total_gst_interest:,.0f}"],
+        ["Processing Fee (incl. GST)", f"{total_fee_with_gst:,.0f}"],
+    ]
+
+    if cashback_emi > 0:
+        totals_rows.append(["Cashback (discount)", f"-{cashback_emi:,.0f}"])
+
+    totals_rows.append(["Net Total (EMI)", f"{normal_total:,.0f}"])
+
     totals_table = Table(
-        [
-            ["Component", "Amount (₹)"],
-            ["Principal", f"{purchase_amount:,.0f}"],
-            ["Interest", f"{total_interest:,.0f}"],
-            ["GST", f"{total_gst_interest:,.0f}"],
-            ["Processing Fee (incl. GST)", f"{total_fee_with_gst:,.0f}"],
-            ["Total Paid (EMI)", f"{normal_total:,.0f}"],
-        ],
+        totals_rows,
         colWidths=[220, 140],
     )
 
@@ -131,26 +144,51 @@ def generate_pdf_report(
     elements.append(Paragraph("<b>Total Payout Breakdown</b>", styles["Heading2"]))
     elements.append(Spacer(1, 8))
     elements.append(totals_table)
+    elements.append(
+        Paragraph(
+            f"<i>Processing fee mode:</i> {fee_mode_normalized}. "
+            "Fixed fees are charged in month 1. "
+            "Percentage fees are financed into the EMI principal.",
+            styles["BodyText"],
+        )
+    )
     elements.append(Spacer(1, 18))
 
     # ---------------- Charts (ONE ROW) ----------------
     elements.append(Paragraph("<b>Cost Breakdown</b>", styles["Heading2"]))
     elements.append(Spacer(1, 10))
 
+    full_net = breakdowns["full"]["net"]
+    emi_net = breakdowns["emi"]["net"]
+    nocost_net = breakdowns["nocost"]["net"]
+
     img_full = Image(
-        generate_donut_image(purchase_amount, 0, 0, total_fee_with_gst),
+        generate_donut_image(
+            full_net["principal"],
+            full_net["interest"],
+            full_net["tax"],
+            full_net["fee"],
+        ),
         width=140,
         height=140,
     )
     img_emi = Image(
         generate_donut_image(
-            purchase_amount, total_interest, total_gst_interest, total_fee_with_gst
+            emi_net["principal"],
+            emi_net["interest"],
+            emi_net["tax"],
+            emi_net["fee"],
         ),
         width=140,
         height=140,
     )
     img_nocost = Image(
-        generate_donut_image(purchase_amount, 0, total_gst_interest, total_fee_with_gst),
+        generate_donut_image(
+            nocost_net["principal"],
+            nocost_net["interest"],
+            nocost_net["tax"],
+            nocost_net["fee"],
+        ),
         width=140,
         height=140,
     )
@@ -178,7 +216,18 @@ def generate_pdf_report(
     elements.append(Paragraph("<b>Detailed Payment Schedule</b>", styles["Heading2"]))
     elements.append(Spacer(1, 10))
 
-    table_data = [emi_df.columns.tolist()] + emi_df.round(2).values.tolist()
+    schedule_df = emi_df.copy()
+    schedule_columns = schedule_df.columns.tolist()
+
+    if fee_mode_normalized == "Percentage":
+        drop_cols = [
+            "Processing Fee",
+            "GST on Processing Fee (@18%)",
+        ]
+        schedule_df = schedule_df.drop(columns=drop_cols, errors="ignore")
+        schedule_columns = schedule_df.columns.tolist()
+
+    table_data = [schedule_columns] + schedule_df.round(2).values.tolist()
 
     schedule_table = Table(table_data, repeatRows=1)
 
@@ -194,6 +243,45 @@ def generate_pdf_report(
     )
 
     elements.append(schedule_table)
+
+    # ---------------- Glossary ----------------
+    elements.append(PageBreak())
+    elements.append(Paragraph("<b>Definitions and Acronyms</b>", styles["Heading2"]))
+    elements.append(Spacer(1, 8))
+
+    glossary_lines = [
+        "<b>EMI:</b> Equated Monthly Installment. The fixed monthly payment.",
+        "<b>Principal (P):</b> The amount financed.",
+        "<b>Interest:</b> Cost charged by the lender on the outstanding balance.",
+        "<b>GST:</b> Goods and Services Tax (applied to interest and fees).",
+        "<b>Processing Fee:</b> One-time fee charged by the lender or bank.",
+        "<b>No-Cost EMI:</b> Interest is discounted by the merchant; taxes and fees may still apply.",
+        "<b>Cashback:</b> Discount applied to the total cost.",
+        "<b>Tenure (n):</b> Total number of months.",
+        "<b>Monthly Rate (r):</b> Annual rate divided by 12 and 100.",
+    ]
+
+    for line in glossary_lines:
+        elements.append(Paragraph(line, styles["BodyText"]))
+        elements.append(Spacer(1, 4))
+
+    elements.append(Spacer(1, 8))
+    elements.append(Paragraph("<b>EMI Formula</b>", styles["Heading3"]))
+    elements.append(Spacer(1, 4))
+    elements.append(
+        Paragraph(
+            "EMI = (P * r * (1 + r)^n) / ((1 + r)^n - 1)",
+            styles["BodyText"],
+        )
+    )
+    elements.append(Spacer(1, 6))
+    elements.append(
+        Paragraph(
+            "Note: For percentage-based processing fees, the fee and GST are added "
+            "to the principal and repaid within the EMI.",
+            styles["BodyText"],
+        )
+    )
 
     doc.build(elements)
     buffer.seek(0)
