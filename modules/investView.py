@@ -40,14 +40,14 @@ def render_invest_view(animate=True):
         st.markdown("### Market Assumptions")
         returns = st.number_input(
             "Expected Return (%)",
-            min_value= 0,
+            min_value= -5.0,
             max_value=155.0,
             value=12.0,
             step=0.25,
         )
         inflation = st.number_input(
             "Inflation (%)",
-            min_value=0,
+            min_value=-2.0,
             max_value=15.0,
             value=6.0,
             step=0.25,
