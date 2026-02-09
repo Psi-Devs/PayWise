@@ -133,8 +133,8 @@ def render_paywise_sidebar() -> PaywiseInputs:
         view_mode = st.radio(
             "Experience",
             [
-                "Simple View",
-                "Detailed Breakdown",
+                "Simple (For Most People)",
+                "Detailed (For Learners)",
                 "Mechanism (How It Works)",
             ],
         )
