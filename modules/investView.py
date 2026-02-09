@@ -49,7 +49,7 @@ def render_invest_view(animate=True):
             "Inflation (%)",
             min_value=-2.0,
             max_value=15.0,
-            value=6.0,
+            value=4.0,
             step=0.25,
         )
 
