@@ -133,8 +133,8 @@ def render_paywise_sidebar() -> PaywiseInputs:
         view_mode = st.radio(
             "Experience",
             [
-                "Simple (For Most People)",
-                "Detailed (For Learners)",
+                "Simple View",
+                "Detailed Breakdown",
                 "Mechanism (How It Works)",
             ],
         )
@@ -143,7 +143,7 @@ def render_paywise_sidebar() -> PaywiseInputs:
             "Purchase Amount (₹)", 1_000, 100_00_000, 20_000, step=1_000
         )
         interest_rate = st.number_input(
-            "Interest Rate (% p.a.)", 0.0, 40.0, 16.0, step=0.05
+            "Interest Rate (% p.a.)", 0.0, 40.0, 12.0, step=0.05
         )
 
         tenure = st.number_input(
