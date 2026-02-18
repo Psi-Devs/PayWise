@@ -5,16 +5,29 @@ from _internal.light import render_app as render_light_app
 
 
 def detect_theme() -> str:
-    theme_info = getattr(st.context, "theme", {}) or {}
-    theme_type = theme_info.get("type")
-    if theme_type in {"light", "dark"}:
-        return theme_type
+    # 1️⃣ Try Streamlit context (works locally sometimes)
+    try:
+        theme_info = getattr(st.context, "theme", None)
+        if theme_info and theme_info.get("type") in ("light", "dark"):
+            return theme_info["type"]
+    except Exception:
+        pass
 
-    base = st.get_option("theme.base")
-    if base in {"light", "dark"}:
-        return base
+    # 2️⃣ Try config option (works in some deployments)
+    try:
+        base = st.get_option("theme.base")
+        if base in ("light", "dark"):
+            return base
+    except Exception:
+        pass
 
+    # 3️⃣ Fallback to stored value (important for Cloud)
+    if "_active_theme" in st.session_state:
+        return st.session_state["_active_theme"]
+
+    # 4️⃣ Final safe default
     return "dark"
+
 
 
 def _check_theme_and_rerun() -> None:
