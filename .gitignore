@@ -1,10 +1,32 @@
-# Virtual environment
-web-venv/
+# Python
 
-# Python cache
-__pycache__/
+**pycache**/
 *.pyc
+*.pyo
+*.pyd
 
-# OS / editor noise
+# Virtual environments
+web-venv/
+.venv/
+venv/
+env/
 .env
+
+# OS junk
+
+desktop.ini
+.DS_Store
+
+# IDE
+
 .vscode/
+.idea/
+
+# Streamlit cache
+
+.streamlit/secrets.toml
+
+# Build artifacts
+
+dist/
+build/
