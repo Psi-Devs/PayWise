@@ -29,20 +29,19 @@ def detect_theme() -> str:
     return "dark"
 
 
-
 def _check_theme_and_rerun() -> None:
-    current = detect_theme()
-    previous = st.session_state.get("_active_theme")
+    detected = detect_theme()
 
-    if previous is None:
-        st.session_state["_active_theme"] = current
+    if "_active_theme" not in st.session_state:
+        st.session_state["_active_theme"] = detected
         return
 
-    if previous != current:
-        st.session_state["_active_theme"] = current
+    if st.session_state["_active_theme"] != detected:
+        st.session_state["_active_theme"] = detected
         st.rerun()
 
 
+# 👇 This keeps watching for theme changes (locally)
 if hasattr(st, "fragment"):
 
     @st.fragment(run_every="1s")
@@ -192,9 +191,16 @@ def main() -> None:
         page_icon="assets/favicon.png",
     )
 
+    # 👇 Ensure theme is initialized ONCE (important for Cloud)
+    if "_active_theme" not in st.session_state:
+        st.session_state["_active_theme"] = detect_theme()
+
     watch_theme_changes()
 
-    if detect_theme() == "light":
+    # ✅ Use cached theme instead of detecting again
+    active_theme = st.session_state["_active_theme"]
+
+    if active_theme == "light":
         render_light_app()
     else:
         render_dark_app()
