@@ -33,23 +33,23 @@ def render_invest_view(animate=True):
             "Annual Step-Up (%)",
             min_value=0.0,
             max_value=25.0,
-            value=10.0,
+            value=0.0,
             step=0.5,
         )
 
         st.markdown("### Market Assumptions")
         returns = st.number_input(
             "Expected Return (%)",
-            min_value=1.0,
-            max_value=25.0,
+            min_value= -5.0,
+            max_value=155.0,
             value=12.0,
             step=0.25,
         )
         inflation = st.number_input(
             "Inflation (%)",
-            min_value=1.0,
+            min_value=-2.0,
             max_value=15.0,
-            value=6.0,
+            value=4.0,
             step=0.25,
         )
 
@@ -57,13 +57,13 @@ def render_invest_view(animate=True):
         years = st.number_input(
             "Investment Duration (Years)",
             min_value=1,
-            max_value=40,
+            max_value=100,
             value=15,
             step=1,
         )
         start_year = st.number_input(
             "Start Year",
-            min_value=2000,
+            min_value=1960,
             max_value=2060,
             value=2026,
             step=1,
