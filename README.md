@@ -24,7 +24,9 @@
 - PDF export with glossary
 
 ## Project Structure
-- `PayWise.py` main Streamlit app and mode toggle
+- `PayWise.py` router entrypoint (theme detection + dispatch)
+- `_internal/` theme renderers + shared core logic
+- `legacy/` old top-level theme/core files (optional, safe to delete)
 - `modules/` UI views and Invest sections
 - `utils/calculations.py` EMI calculation engine
 - `utils/paywise_summary.py` PayWise summary builder for UI views
