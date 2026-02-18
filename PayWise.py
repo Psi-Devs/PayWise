@@ -1,61 +1,40 @@
 import streamlit as st
-from dataclasses import dataclass
 
-from modules.detailedView import render_detailed_view
-from modules.investView import render_invest_view
-from modules.mechanismView import render_mechanism_view
-from modules.simpleView import render_simple_view
-from utils.calculations import compute_paywise, yearly_view
-from utils.pdf_export import generate_pdf_report
-from utils.paywise_summary import build_paywise_summary
+from _internal.dark import render_app as render_dark_app
+from _internal.light import render_app as render_light_app
 
 
-st.set_page_config(
-    page_title="PayWise – Smart EMI Comparison",
-    layout="wide",
-    page_icon="assets/favicon.png",
-)
+def detect_theme() -> str:
+    theme_info = getattr(st.context, "theme", {}) or {}
+    theme_type = theme_info.get("type")
+    if theme_type in {"light", "dark"}:
+        return theme_type
+
+    base = st.get_option("theme.base")
+    if base in {"light", "dark"}:
+        return base
+
+    return "dark"
 
 
-@dataclass(frozen=True)
-class PaywiseInputs:
-    view_mode: str
-    purchase_amount: int
-    interest_rate: float
-    tenure: int
-    processing_fee_base: float
-    fee_type: str
-    cashback_full: float
-    cashback_emi: float
-    cashback_nocost: float
-    schedule_view: str
+def _check_theme_and_rerun() -> None:
+    current = detect_theme()
+    previous = st.session_state.get("_active_theme")
+
+    if previous is None:
+        st.session_state["_active_theme"] = current
+        return
+
+    if previous != current:
+        st.session_state["_active_theme"] = current
+        st.rerun()
 
 
-def render_mode_toggle():
-    with st.sidebar:
-        st.markdown("### Mode")
-        mode_invest = st.toggle("PayWise / Invest", value=False)
-        mode = "Invest" if mode_invest else "PayWise"
+if hasattr(st, "fragment"):
 
-        st.markdown(
-            f"<div style='display:flex; justify-content:space-between; font-size:0.9rem; opacity:0.85;'>"
-            f"<span style='font-weight:{'700' if mode == 'PayWise' else '400'}'>PayWise</span>"
-            f"<span style='font-weight:{'700' if mode == 'Invest' else '400'}'>Invest</span>"
-            f"</div>",
-            unsafe_allow_html=True,
-        )
-
-    prev_mode = st.session_state.get("mode", "PayWise")
-    mode_changed = mode != prev_mode
-    st.session_state["mode"] = mode
-
-    return mode, mode_changed
-
-
-def apply_theme(mode: str) -> None:
-    theme_bg = "#0f0f1a" if mode == "PayWise" else "#0b1416"
-    accent = "#ff4d5a" if mode == "PayWise" else "#2bb673"
-    toggle_bg = "#2b2f3a" if mode == "PayWise" else "#1c2a2e"
+    @st.fragment(run_every="1s")
+    def watch_theme_changes() -> None:
+        _check_theme_and_rerun()
 
     st.markdown(
         f"""
@@ -189,113 +168,23 @@ def render_paywise_sidebar() -> PaywiseInputs:
 def render_paywise_header() -> None:
     st.markdown("## 💳 PayWise \n### *Make smarter payment decisions.*")
 
-
-def render_paywise_view(inputs: PaywiseInputs) -> None:
-    data = compute_paywise(
-        purchase_amount=inputs.purchase_amount,
-        interest_rate=inputs.interest_rate,
-        tenure=inputs.tenure,
-        processing_fee_base=inputs.processing_fee_base,
-        fee_mode=inputs.fee_type,
-        cashback_full=inputs.cashback_full,
-        cashback_emi=inputs.cashback_emi,
-        cashback_nocost=inputs.cashback_nocost,
-    )
-
-    emi_df = data["emi_df"]
-    breakdowns = data["breakdowns"]
-    summary = build_paywise_summary(inputs.purchase_amount, inputs.tenure, data)
-
-    if inputs.view_mode == "Simple (For Most People)":
-        render_simple_view(
-            inputs.purchase_amount,
-            summary.full_total,
-            summary.normal_total,
-            summary.no_cost_total,
-            summary.avg_monthly,
-            summary.avg_principal,
-            summary.avg_interest,
-            summary.avg_tax,
-            summary.avg_fee,
-            emi_df,
-            inputs.schedule_view,
-            yearly_view,
-            breakdowns,
-        )
-    elif inputs.view_mode == "Detailed (For Learners)":
-        render_detailed_view(
-            inputs.purchase_amount,
-            summary.full_total,
-            summary.normal_total,
-            summary.no_cost_total,
-            summary.avg_monthly,
-            summary.avg_principal,
-            summary.avg_interest,
-            summary.avg_tax,
-            summary.avg_fee,
-            emi_df,
-            inputs.schedule_view,
-            inputs.fee_type,
-            breakdowns,
-        )
-    else:
-        render_mechanism_view(
-            inputs.purchase_amount,
-            inputs.interest_rate,
-            inputs.tenure,
-            inputs.processing_fee_base,
-            inputs.fee_type,
-            inputs.cashback_full,
-            inputs.cashback_emi,
-            inputs.cashback_nocost,
-            data,
-        )
-
-    st.markdown("### 📄 Download")
-
-    pdf_buffer = generate_pdf_report(
-        inputs.purchase_amount,
-        summary.full_total,
-        summary.normal_total,
-        summary.no_cost_total,
-        summary.total_interest,
-        summary.total_gst_interest,
-        summary.total_fee_with_gst,
-        emi_df,
-        breakdowns,
-        inputs.fee_type,
-    )
-
-    st.download_button(
-        label="Download Detailed PDF",
-        data=pdf_buffer,
-        file_name="PayWise_EMI_Report.pdf",
-        mime="application/pdf",
-    )
-
-
-def render_footer() -> None:
-    st.markdown(
-        "<hr style='opacity:0.2'>"
-        "<small style='opacity:0.6'>"
-        "© 2025 Psi Dev — PayWise. \n"
-        "Independent EMI calculator. Actual charges may vary by bank or merchant."
-        "</small>",
-        unsafe_allow_html=True,
-    )
+    def watch_theme_changes() -> None:
+        _check_theme_and_rerun()
 
 
 def main() -> None:
-    mode, mode_changed = render_mode_toggle()
-    apply_theme(mode)
+    st.set_page_config(
+        page_title="PayWise – Smart EMI Comparison",
+        layout="wide",
+        page_icon="assets/favicon.png",
+    )
 
-    if mode == "PayWise":
-        inputs = render_paywise_sidebar()
-        render_paywise_header()
-        render_paywise_view(inputs)
-        render_footer()
+    watch_theme_changes()
+
+    if detect_theme() == "light":
+        render_light_app()
     else:
-        render_invest_view(animate=not mode_changed)
+        render_dark_app()
 
 
 if __name__ == "__main__":
